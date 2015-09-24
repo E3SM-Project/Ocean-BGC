@@ -40,7 +40,7 @@ MODULE BGC_parms
        yps = c1 / (365.0_BGC_r8*spd)  ! number of years in a second
 
   INTEGER (KIND=BGC_i4), PARAMETER :: &
-     autotroph_cnt   = 3
+     autotroph_cnt   = 4
 
   real (BGC_r8), public :: T0_Kelvin_BGC
 
@@ -66,7 +66,7 @@ MODULE BGC_parms
         PCref,                              & ! max C-spec. grth rate at tref (1/sec)
         thetaN_max,                         & ! max thetaN (Chl/N) (mg Chl/mmol N)
         loss_thres, loss_thres2,            & ! conc. where losses go to zero
-        temp_thres,                         & ! Temp. where concentration threshold and photosynth. rate drops
+        temp_thres,temp_thres2,             & ! Temp. where concentration threshold and photosynth. rate drops
         mort, mort2,                        & ! linear and quadratic mortality rates (1/sec), (1/sec/((mmol C/m3))
         agg_rate_max, agg_rate_min,         & ! max and min agg. rate (1/d)
         z_umax_0,                           & ! max zoo growth rate at tref (1/sec)
@@ -102,6 +102,9 @@ MODULE BGC_parms
       diatChl_ind,      & ! diatom chlorophyll
       diatFe_ind,       & ! diatom iron
       diatSi_ind,       & ! diatom silicon
+      phaeoC_ind,       & ! Phaeocystis carbon
+      phaeoChl_ind,     & ! Phaeocystis chlorophyll
+      phaeoFe_ind,      & ! Phaeocystis iron
       diazC_ind,        & ! diazotroph carbon
       diazChl_ind,      & ! diazotroph chlorophyll
       diazFe_ind          ! diazotroph iron
@@ -109,7 +112,8 @@ MODULE BGC_parms
    integer (BGC_i4) :: &
       sp_ind,          & ! autotroph index for small phyto
       diat_ind,        & ! autotroph index for diatoms
-      diaz_ind           ! autotroph index for diazotrophs
+      diaz_ind,        & ! autotroph index for diazotrophs
+      phaeo_ind          ! autotroph index for Phaeocystis
 
    character (BGC_char), allocatable, dimension(:) ::  &
       short_name,      & ! short name of variable
@@ -264,7 +268,6 @@ MODULE BGC_parms
       diag_photoNH4,       &! diag array for NH4 uptake
       diag_DOP_uptake,     &! diag array for DOP uptake
       diag_PO4_uptake,     &! diag array for PO4 uptake
-      diag_NO3_uptake,     &! diag array for NO3 uptake
       diag_auto_graze,     &! diag array for autotroph grazing
       diag_auto_loss,      &! diag array for autotroph loss
       diag_auto_agg,       &! diag array for autotroph aggregate
@@ -496,6 +499,7 @@ CONTAINS
     BGC_indices%sp_ind   = 1
     BGC_indices%diat_ind = 2
     BGC_indices%diaz_ind = 3
+    BGC_indices%phaeo_ind = 4
 
     !---------------------------------------------------------------------------
     !   default namelist settings
@@ -542,6 +546,7 @@ CONTAINS
     autotrophs(auto_ind)%loss_thres    = 0.04_BGC_r8
     autotrophs(auto_ind)%loss_thres2   = 0.0_BGC_r8
     autotrophs(auto_ind)%temp_thres    = -10.0_BGC_r8
+    autotrophs(auto_ind)%temp_thres2   = 0.0_BGC_r8
     autotrophs(auto_ind)%mort          = 0.12_BGC_r8 * dps
     autotrophs(auto_ind)%mort2         = 0.001_BGC_r8 * dps
     autotrophs(auto_ind)%agg_rate_max  = 0.9_BGC_r8
@@ -576,6 +581,7 @@ CONTAINS
     autotrophs(auto_ind)%loss_thres    = 0.04_BGC_r8
     autotrophs(auto_ind)%loss_thres2   = 0.0_BGC_r8
     autotrophs(auto_ind)%temp_thres    = -10.0_BGC_r8
+    autotrophs(auto_ind)%temp_thres2   = 0.0_BGC_r8
     autotrophs(auto_ind)%mort          = 0.12_BGC_r8 * dps
     autotrophs(auto_ind)%mort2         = 0.001_BGC_r8 * dps
     autotrophs(auto_ind)%agg_rate_max  = 0.9_BGC_r8
@@ -610,6 +616,7 @@ CONTAINS
     autotrophs(auto_ind)%loss_thres    = 0.022_BGC_r8
     autotrophs(auto_ind)%loss_thres2   = 0.001_BGC_r8
     autotrophs(auto_ind)%temp_thres    = 14.0_BGC_r8
+    autotrophs(auto_ind)%temp_thres2   = 0.0_BGC_r8
     autotrophs(auto_ind)%mort          = 0.15_BGC_r8 * dps
     autotrophs(auto_ind)%mort2         = 0.0_BGC_r8
     autotrophs(auto_ind)%agg_rate_max  = 0.0_BGC_r8
@@ -621,6 +628,41 @@ CONTAINS
     autotrophs(auto_ind)%graze_doc     = 0.15_BGC_r8
     autotrophs(auto_ind)%loss_poc      = 0.0_BGC_r8
     autotrophs(auto_ind)%f_zoo_detr    = 0.15_BGC_r8
+
+    auto_ind = BGC_indices%phaeo_ind
+    autotrophs(auto_ind)%sname         = 'phaeo'
+    autotrophs(auto_ind)%lname         = 'Phaeocystis'
+    autotrophs(auto_ind)%Nfixer        = .false.
+    autotrophs(auto_ind)%imp_calcifier = .false.
+    autotrophs(auto_ind)%exp_calcifier = .false.
+    autotrophs(auto_ind)%grazee_ind    = auto_ind
+    autotrophs(auto_ind)%kFe           = 0.075e-3_BGC_r8
+    autotrophs(auto_ind)%kPO4          = 0.05_BGC_r8
+    autotrophs(auto_ind)%kDOP          = 0.9_BGC_r8
+    autotrophs(auto_ind)%kNO3          = 0.7_BGC_r8
+    autotrophs(auto_ind)%kNH4          = 0.05_BGC_r8
+    autotrophs(auto_ind)%kSiO3         = 0.0_BGC_r8
+    autotrophs(auto_ind)%Qp            = 0.00855_BGC_r8
+    autotrophs(auto_ind)%gQfe_0        = 20.0e-6_BGC_r8
+    autotrophs(auto_ind)%gQfe_min      = 3.0e-6_BGC_r8
+    autotrophs(auto_ind)%alphaPI       = 0.77_BGC_r8 * dps
+    autotrophs(auto_ind)%PCref         = 5.5_BGC_r8 * dps
+    autotrophs(auto_ind)%thetaN_max    = 2.5_BGC_r8
+    autotrophs(auto_ind)%loss_thres    = 0.04_BGC_r8
+    autotrophs(auto_ind)%loss_thres2   = 0.0_BGC_r8
+    autotrophs(auto_ind)%temp_thres    = -10.0_BGC_r8
+    autotrophs(auto_ind)%temp_thres2    = 30.0_BGC_r8
+    autotrophs(auto_ind)%mort          = 0.12_BGC_r8 * dps
+    autotrophs(auto_ind)%mort2         = 0.001_BGC_r8 * dps
+    autotrophs(auto_ind)%agg_rate_max  = 0.9_BGC_r8
+    autotrophs(auto_ind)%agg_rate_min  = 0.02_BGC_r8
+    autotrophs(auto_ind)%z_umax_0      = 3.08_BGC_r8 * dps ! x1 default
+    autotrophs(auto_ind)%z_grz         = 1.0_BGC_r8
+    autotrophs(auto_ind)%graze_zoo     = 0.3_BGC_r8
+    autotrophs(auto_ind)%graze_poc     = 0.42_BGC_r8
+    autotrophs(auto_ind)%graze_doc     = 0.15_BGC_r8
+    autotrophs(auto_ind)%loss_poc      = 0.0_BGC_r8
+    autotrophs(auto_ind)%f_zoo_detr    = 0.2_BGC_r8
 
   END SUBROUTINE BGC_parms_init
 

@@ -113,8 +113,9 @@
 !  module variables
 !-----------------------------------------------------------------------
 
+! increase tracer_cnt for phaeo (swang)
    integer (BGC_i4), parameter :: &
-      BGC_tracer_cnt = 27
+      BGC_tracer_cnt = 30
 
    integer (BGC_r8), parameter, private :: &
        c0 =   0.0_BGC_r8,         &
@@ -273,71 +274,50 @@ contains
         Chl_ind = BGC_indices%spChl_ind
         C_ind   = BGC_indices%spC_ind
         Fe_ind  = BGC_indices%spFe_ind
-
-        BGC_indices%short_name(Chl_ind) = 'spChl'
-        BGC_indices%long_name(Chl_ind)  = 'Small Phyto Chlorophyll'
-        autotrophs(auto_ind)%Chl_ind = Chl_ind
-
-        BGC_indices%short_name(C_ind) = 'spC'
-        BGC_indices%long_name(C_ind)  = 'Small Phyto Carbon'
-        autotrophs(auto_ind)%C_ind = C_ind
-
-        BGC_indices%short_name(Fe_ind) = 'spFe'
-        BGC_indices%long_name(Fe_ind)  = 'Small Phyto Iron'
-        autotrophs(auto_ind)%Fe_ind = Fe_ind
-
-        CaCO3_ind = BGC_indices%spCaCO3_ind
-        BGC_indices%short_name(CaCO3_ind) = 'spCaCO3'
-        BGC_indices%long_name(CaCO3_ind)  = 'Small Phyto CaCO3'
-        autotrophs(auto_ind)%CaCO3_ind = CaCO3_ind
-
-        autotrophs(auto_ind)%Si_ind = 0
       elseif (auto_ind == BGC_indices%diat_ind) then
         Chl_ind = BGC_indices%diatChl_ind
         C_ind   = BGC_indices%diatC_ind
         Fe_ind  = BGC_indices%diatFe_ind
-
-        BGC_indices%short_name(Chl_ind) = 'diatChl'
-        BGC_indices%long_name(Chl_ind)  = 'Diatom Chlorophyll'
-        autotrophs(auto_ind)%Chl_ind = Chl_ind
-
-        BGC_indices%short_name(C_ind) = 'diatC'
-        BGC_indices%long_name(C_ind)  = 'Diatom Carbon'
-        autotrophs(auto_ind)%C_ind = C_ind
-
-        BGC_indices%short_name(Fe_ind) = 'diatFe'
-        BGC_indices%long_name(Fe_ind)  = 'Diatom Iron'
-        autotrophs(auto_ind)%Fe_ind = Fe_ind
-
-        autotrophs(auto_ind)%CaCO3_ind = 0
-
-        Si_ind = BGC_indices%diatSi_ind
-        BGC_indices%short_name(Si_ind) = 'diatSi'
-        BGC_indices%long_name(Si_ind)  = 'Diatom Silicon'
-        autotrophs(auto_ind)%Si_ind = Si_ind
-
       elseif (auto_ind == BGC_indices%diaz_ind) then
         Chl_ind = BGC_indices%diazChl_ind
         C_ind   = BGC_indices%diazC_ind
         Fe_ind  = BGC_indices%diazFe_ind
-
-        BGC_indices%short_name(Chl_ind) = 'diazChl'
-        BGC_indices%long_name(Chl_ind)  = 'Diazotroph Chlorophyll'
-        autotrophs(auto_ind)%Chl_ind = Chl_ind
-
-        BGC_indices%short_name(C_ind) = 'diazC'
-        BGC_indices%long_name(C_ind)  = 'Diazotroph Carbon'
-        autotrophs(auto_ind)%C_ind = C_ind
-
-        BGC_indices%short_name(Fe_ind) = 'diazFe'
-        BGC_indices%long_name(Fe_ind)  = 'Diazotroph Iron'
-        autotrophs(auto_ind)%Fe_ind = Fe_ind
-
-        autotrophs(auto_ind)%CaCO3_ind = 0
-
-        autotrophs(auto_ind)%Si_ind = 0
+      elseif (auto_ind == BGC_indices%phaeo_ind) then
+        Chl_ind = BGC_indices%phaeoChl_ind
+        C_ind   = BGC_indices%phaeoC_ind
+        Fe_ind  = BGC_indices%phaeoFe_ind
       endif
 
+      BGC_indices%short_name(Chl_ind) = trim(autotrophs(auto_ind)%sname) // 'Chl'
+      BGC_indices%long_name(Chl_ind)  = trim(autotrophs(auto_ind)%lname) // ' Chlorophyll'
+      autotrophs(auto_ind)%Chl_ind = Chl_ind
+
+      BGC_indices%short_name(C_ind) = trim(autotrophs(auto_ind)%sname) // 'C'
+      BGC_indices%long_name(C_ind)  = trim(autotrophs(auto_ind)%lname) // ' Carbon'
+      autotrophs(auto_ind)%C_ind = C_ind
+
+      BGC_indices%short_name(Fe_ind) = trim(autotrophs(auto_ind)%sname) // 'Fe'
+      BGC_indices%long_name(Fe_ind)  = trim(autotrophs(auto_ind)%lname) // ' Iron'
+      autotrophs(auto_ind)%Fe_ind = Fe_ind
+
+      if (autotrophs(auto_ind)%kSiO3 > c0) then
+         Si_ind = BGC_indices%diatSi_ind
+         BGC_indices%short_name(Si_ind) = trim(autotrophs(auto_ind)%sname) // 'Si'
+         BGC_indices%long_name(Si_ind)  = trim(autotrophs(auto_ind)%lname) // ' Silicon'
+         autotrophs(auto_ind)%Si_ind = Si_ind
+      else
+         autotrophs(auto_ind)%Si_ind = 0
+      endif
+
+      if (autotrophs(auto_ind)%imp_calcifier .or. &
+          autotrophs(auto_ind)%exp_calcifier) then
+         CaCO3_ind = BGC_indices%spCaCO3_ind
+         BGC_indices%short_name(CaCO3_ind) = trim(autotrophs(auto_ind)%sname) // 'CaCO3'
+         BGC_indices%long_name(CaCO3_ind)  = trim(autotrophs(auto_ind)%lname) // ' CaCO3'
+         autotrophs(auto_ind)%CaCO3_ind = CaCO3_ind
+      else
+         autotrophs(auto_ind)%CaCO3_ind = 0
+      endif
    end do
 
    BGC_indices%units(:)                       = 'mmol/m^3'
@@ -345,6 +325,7 @@ contains
    BGC_indices%units(BGC_indices%spChl_ind)   = 'mg/m^3'
    BGC_indices%units(BGC_indices%diatChl_ind) = 'mg/m^3'
    BGC_indices%units(BGC_indices%diazChl_ind) = 'mg/m^3'
+   BGC_indices%units(BGC_indices%phaeoChl_ind) = 'mg/m^3'
 
 !-----------------------------------------------------------------------
 !EOC
@@ -438,7 +419,7 @@ contains
    logical (BGC_log) :: zero_mask
 
    real (BGC_r8) :: &
-      work1,work2,work3,work4 ! temporaries
+      work1,work2,work3,work4,work5 ! temporaries
 
    real (BGC_r8) :: &
       f_loss_thres,   &! fraction of grazing loss reduction at depth
@@ -733,7 +714,6 @@ contains
    BGC_diagnostic_fields%diag_photoNH4 = c0
    BGC_diagnostic_fields%diag_PO4_uptake = c0
    BGC_diagnostic_fields%diag_DOP_uptake = c0
-   BGC_diagnostic_fields%diag_NO3_uptake = c0
    BGC_diagnostic_fields%diag_photoFe = c0
    BGC_diagnostic_fields%diag_bSi_form = c0
    BGC_diagnostic_fields%diag_CaCO3_form = c0
@@ -950,10 +930,10 @@ contains
 !  compute terms of carbonate chemistry
 !-----------------------------------------------------------------------
 
-!  lcalc_co2_terms = .true.
-!  lalt_co2_terms = .true.
-   lcalc_co2_terms = .false.
-   lalt_co2_terms = .false.
+   lcalc_co2_terms = .true.
+   lalt_co2_terms = .true.
+!  lcalc_co2_terms = .false.
+!  lalt_co2_terms = .false.
 
    work3 = c0
    work4 = c0
@@ -965,7 +945,9 @@ contains
          work1 = phlo_3d_init
          work2 = phhi_3d_init
       end if
-      call comp_CO3terms( k, BGC_input%cell_center_depth(k,column), .true., &
+      work5 = BGC_input%cell_center_depth(k,column)*0.01_BGC_r8
+!     call comp_CO3terms( k, BGC_input%cell_center_depth(k,column), .true., &
+      call comp_CO3terms( k, work5, .true., &
                          BGC_input%PotentialTemperature(k,column), BGC_input%Salinity(k,column), DIC_loc(k,column),  &
                          ALK_loc(k,column), PO4_loc(k,column), SiO3_loc(k,column),           &
                          work1, work2, work3, H2CO3, HCO3, CO3)
@@ -985,7 +967,9 @@ contains
          work1 = phlo_3d_init
          work2 = phhi_3d_init
       end if
-      call comp_CO3terms( k, BGC_input%cell_center_depth(k,column), .true., &
+      work5 = BGC_input%cell_center_depth(k,column)*0.01_BGC_r8
+!     call comp_CO3terms( k, BGC_input%cell_center_depth(k,column), .true., &
+      call comp_CO3terms( k, work5, .true., &
                          BGC_input%PotentialTemperature(k,column), BGC_input%Salinity(k,column), DIC_loc(k,column),  &
                          ALK_loc(k,column), PO4_loc(k,column), SiO3_loc(k,column),           &
                          work1, work2, work4, H2CO3_ALT_CO2, HCO3_ALT_CO2, CO3_ALT_CO2)
@@ -1068,12 +1052,16 @@ contains
 
 !-----------------------------------------------------------------------
 !  Compute Pprime for all autotrophs, used for loss terms
+!  temp_thres for phaeo is the upper limit for growth (swang)
 !-----------------------------------------------------------------------
 
    do auto_ind = 1, autotroph_cnt
       C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres
       if (BGC_input%PotentialTemperature(k,column) < autotrophs(auto_ind)%temp_thres)   &
          C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres2
+      if (autotrophs(auto_ind)%temp_thres2 > c0 .and. BGC_input%PotentialTemperature(k,column) > autotrophs(auto_ind)%temp_thres2) then
+         C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres2
+      endif
 
       Pprime(auto_ind) = max(autotrophC_loc(k,column,auto_ind) - C_loss_thres, 0.0_BGC_r8)
    end do
@@ -1125,10 +1113,17 @@ contains
 
 !-----------------------------------------------------------------------
 !     get photosynth. rate, phyto C biomass change, photoadapt
+!         modify growth curve for phaeo (swang)
 !-----------------------------------------------------------------------
 
       PCmax = autotrophs(auto_ind)%PCref * f_nut * Tfunc
       if (BGC_input%PotentialTemperature(k,column) < autotrophs(auto_ind)%temp_thres) PCmax = c0
+
+      if (autotrophs(auto_ind)%temp_thres2 > c0) then
+         PCmax = PCmax * min(1.0_BGC_r8,((autotrophs(auto_ind)%temp_thres2 - BGC_input%PotentialTemperature(k,column)) / &
+            (autotrophs(auto_ind)%temp_thres2 - 16.3_BGC_r8)))
+         PCmax = max(PCmax, 0.0_BGC_r8)
+      endif
 
       light_lim = (c1 - exp((-c1 * autotrophs(auto_ind)%alphaPI * thetaC(auto_ind) * PAR_avg) / &
                             (PCmax + epsTinv)))
@@ -1174,8 +1169,6 @@ contains
 
       BGC_diagnostic_fields%diag_PO4_uptake(k,column,auto_ind) = PO4_V(auto_ind)
       BGC_diagnostic_fields%diag_DOP_uptake(k,column,auto_ind) = DOP_V(auto_ind)
-
-      BGC_diagnostic_fields%diag_NO3_uptake(k,column,auto_ind) = NO3_V(auto_ind)
 
       photoFe(auto_ind) = photoC(auto_ind) * gQfe(auto_ind)
       BGC_diagnostic_fields%diag_photoFe(k,column,auto_ind) = photoFe(auto_ind)
