@@ -17,6 +17,10 @@ endif
 
 MODULES = BGC_mod.F90 \
           BGC_parms.F90 \
+          DMS_mod.F90 \
+          DMS_parms.F90 \
+          MACROS_mod.F90 \
+          MACROS_parms.F90 \
           co2calc.F90
 
 # Some compilers produce ALL_UPPER_CASE.mod files
