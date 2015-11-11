@@ -82,5 +82,5 @@ check:
 
 # Remove library, object files, module files, and dependency file
 clean:
-	/bin/rm -f $(LIB_DIR)/libBGC.a $(OBJS) $(MODS) $(DEP_FILE)
+	/bin/rm -f $(LIB_DIR)/libBGC.a $(OBJS) $(MODS) $(DEP_FILE) *.mod
 
