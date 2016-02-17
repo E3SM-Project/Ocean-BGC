@@ -149,12 +149,12 @@ CONTAINS
     f_prot      = 0.6_MACROS_r8
     f_poly      = 0.2_MACROS_r8
     f_lip       = 0.2_MACROS_r8
-    k_C_p_base  = 0.1_MACROS_r8 
+    k_C_p_base  = dps*0.1_MACROS_r8 
     zooC_avg    = 0.3_MACROS_r8
     mort        = 0.0_MACROS_r8
-    k_prot_bac  = 0.1_MACROS_r8
-    k_poly_bac  = 0.01_MACROS_r8
-    k_lip_bac   = 1.0_MACROS_r8
+    k_prot_bac  = dps*0.1_MACROS_r8
+    k_poly_bac  = dps*0.01_MACROS_r8
+    k_lip_bac   = dps*1.0_MACROS_r8
     inject_scale = 1.0_MACROS_r8
 
     !---------------------------------------------------------------------------
