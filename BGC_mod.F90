@@ -2460,6 +2460,9 @@ work4 = BGC_output%BGC_tendencies(k,column,po4_ind)
       SED_DENITRIF = dzr_loc * flux &
          * (0.06_BGC_r8 + 0.19_BGC_r8 * 0.99_BGC_r8**(O2_loc-NO3_loc))
 
+!maltrud prevent denitrification if NO# concentration is too low
+      if (NO3_loc < 5.0_BGC_r8) SED_DENITRIF = 0.
+
       flux_alt = flux*1.0e-6_BGC_r8*spd*365.0_BGC_r8 ! convert to mmol/cm^2/year
       OTHER_REMIN = dzr_loc &
          * min(min(0.1_BGC_r8 + flux_alt,0.5_BGC_r8) * (flux - POC%sed_loss), &
