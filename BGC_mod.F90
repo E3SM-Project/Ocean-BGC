@@ -1103,7 +1103,7 @@ contains
 
       BGC_diagnostic_fields%diag_P_lim(k,column,auto_ind) = VPtot
 
-      f_nut = min(f_nut, VPO4)
+      f_nut = min(f_nut, VPtot)
 
       if (autotrophs(auto_ind)%kSiO3 > c0) then
          VSiO3 = SiO3_loc(k,column) / (SiO3_loc(k,column) + autotrophs(auto_ind)%kSiO3)
@@ -1750,7 +1750,7 @@ work4 = BGC_output%BGC_tendencies(k,column,po4_ind)
       BGC_diagnostic_fields%diag_photoC(k,column,auto_ind) = photoC(auto_ind)
       work1 = BGC_input%cell_thickness(k,column) * photoC(auto_ind)
       BGC_diagnostic_fields%diag_photoC_zint(column,auto_ind) =  &
-          BGC_diagnostic_fields%diag_photoC_zint(column,auto_ind) + photoC(auto_ind)
+          BGC_diagnostic_fields%diag_photoC_zint(column,auto_ind) + work1
    end do
 
    work1 = sum(photoC)
