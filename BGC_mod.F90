@@ -419,7 +419,7 @@ contains
    logical (BGC_log) :: zero_mask
 
    real (BGC_r8) :: &
-      work1,work2,work3,work4,work5 ! temporaries
+      work1,work2,work3,work4,work5,tmpTopt,tmpTmax ! temporaries
 
    real (BGC_r8) :: &
       f_loss_thres,   &! fraction of grazing loss reduction at depth
@@ -631,6 +631,7 @@ contains
    BGC_diagnostic_fields%diag_photoC_NO3_zint = c0
    BGC_diagnostic_fields%diag_photoC_NO3_TOT = c0
    BGC_diagnostic_fields%diag_photoC_NO3_TOT_zint = c0
+   BGC_diagnostic_fields%diag_Chl_TOT_zint_100m = c0
    BGC_diagnostic_fields%diag_Jint_Ctot = c0
    BGC_diagnostic_fields%diag_Jint_100m_Ctot = c0
    BGC_diagnostic_fields%diag_Jint_Ntot = c0
@@ -1055,14 +1056,37 @@ contains
 !  temp_thres for phaeo is the upper limit for growth (swang)
 !-----------------------------------------------------------------------
 
+!   do auto_ind = 1, autotroph_cnt
+!      C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres
+!      if (BGC_input%PotentialTemperature(k,column) < autotrophs(auto_ind)%temp_thres)   &
+!         C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres2
+!      if (autotrophs(auto_ind)%temp_thres2 > c0 .and. BGC_input%PotentialTemperature(k,column) > autotrophs(auto_ind)%temp_thres2) then
+!         C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres2
+!      endif
+!      Pprime(auto_ind) = max(autotrophC_loc(k,column,auto_ind) - C_loss_thres, 0.0_BGC_r8)
+!   end do
+
    do auto_ind = 1, autotroph_cnt
       C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres
-      if (BGC_input%PotentialTemperature(k,column) < autotrophs(auto_ind)%temp_thres)   &
-         C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres2
-      if (autotrophs(auto_ind)%temp_thres2 > c0 .and. BGC_input%PotentialTemperature(k,column) > autotrophs(auto_ind)%temp_thres2) then
-         C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres2
-      endif
+   select case (autotrophs(auto_ind)%temp_function)
 
+      case (tfnc_q10)
+
+	    if (BGC_input%PotentialTemperature(k,column) < autotrophs(auto_ind)%temp_thres)   &
+	        C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres2
+
+      case (tfnc_quasi_mmrt)
+
+            if (BGC_input%cell_latitude(column) >= 0.0_BGC_r8 ) then
+            	tmpTmax = autotrophs(auto_ind)%temp_thresN
+            else
+            	tmpTmax = autotrophs(auto_ind)%temp_thresS
+            end if
+
+           if (BGC_input%PotentialTemperature(k,column) > tmpTmax) &
+               C_loss_thres = f_loss_thres * autotrophs(auto_ind)%loss_thres2
+
+   end select
       Pprime(auto_ind) = max(autotrophC_loc(k,column,auto_ind) - C_loss_thres, 0.0_BGC_r8)
    end do
 
@@ -1119,12 +1143,32 @@ contains
       PCmax = autotrophs(auto_ind)%PCref * f_nut * Tfunc
       if (BGC_input%PotentialTemperature(k,column) < autotrophs(auto_ind)%temp_thres) PCmax = c0
 
-      if (autotrophs(auto_ind)%temp_thres2 > c0) then
-         PCmax = PCmax * min(1.0_BGC_r8,((autotrophs(auto_ind)%temp_thres2 - BGC_input%PotentialTemperature(k,column)) / &
-            (autotrophs(auto_ind)%temp_thres2 - 16.3_BGC_r8)))
-         PCmax = max(PCmax, 0.0_BGC_r8)
-      endif
+!      if (autotrophs(auto_ind)%temp_thres2 > c0) then
+!         PCmax = PCmax * min(1.0_BGC_r8,((autotrophs(auto_ind)%temp_thres2 - BGC_input%PotentialTemperature(k,column)) / &
+!            (autotrophs(auto_ind)%temp_thres2 - 16.3_BGC_r8)))
+!         PCmax = max(PCmax, 0.0_BGC_r8)
+!      endif
 
+    select case (autotrophs(auto_ind)%temp_function)
+
+      case (tfnc_q10)
+
+            PCmax = PCmax
+
+      case (tfnc_quasi_mmrt)
+
+            if (BGC_input%cell_latitude(column) >= 0.0_BGC_r8 ) then
+            	tmpTopt = autotrophs(auto_ind)%temp_optN
+            	tmpTmax = autotrophs(auto_ind)%temp_thresN
+            else
+            	tmpTopt = autotrophs(auto_ind)%temp_optS
+            	tmpTmax = autotrophs(auto_ind)%temp_thresS
+            end if
+            PCmax = PCmax * min(1.0_BGC_r8,((tmpTmax - BGC_input%PotentialTemperature(k,column)) / &
+            (tmpTmax - tmpTopt)))
+            if (BGC_input%PotentialTemperature(k,column) > tmpTmax) PCmax = c0
+    end select
+    
       light_lim = (c1 - exp((-c1 * autotrophs(auto_ind)%alphaPI * thetaC(auto_ind) * PAR_avg) / &
                             (PCmax + epsTinv)))
       PCphoto = PCmax * light_lim
@@ -1250,17 +1294,31 @@ contains
       work1 = c0
       do auto_ind2 = 1, autotroph_cnt
          if (autotrophs(auto_ind2)%grazee_ind == autotrophs(auto_ind)%grazee_ind) &
-            work1 = work1 + Pprime(auto_ind)
+            work1 = work1 + Pprime(auto_ind2)
       end do
 
       z_umax = autotrophs(auto_ind)%z_umax_0 * Tfunc
+
+! decrease grazing pressure on diat, when phaeo growth decreases with
+! temperature (swang)      
+      if (auto_ind == BGC_indices%diat_ind) then
+         if ((BGC_input%cell_latitude(column) >= 0.0_BGC_r8) .and. &
+               (BGC_input%PotentialTemperature(k,column) > autotrophs(auto_ind)%temp_optN)) then
+               z_umax = z_umax * max((autotrophs(auto_ind)%temp_thresN - BGC_input%PotentialTemperature(k,column)) / &
+                            (autotrophs(auto_ind)%temp_thresN - autotrophs(auto_ind)%temp_optN), 0.95_BGC_r8)
+         elseif ((BGC_input%cell_latitude(column) <= 0.0_BGC_r8) .and. &
+                   (BGC_input%PotentialTemperature(k,column) > autotrophs(auto_ind)%temp_optS)) then
+               z_umax = z_umax * max((autotrophs(auto_ind)%temp_thresS - BGC_input%PotentialTemperature(k,column)) / &
+                            (autotrophs(auto_ind)%temp_thresS - autotrophs(auto_ind)%temp_optS), 0.95_BGC_r8)
+         endif 
+      endif
 
       if (work1 > c0) then
          auto_graze(auto_ind) = (Pprime(auto_ind) / work1) * &
             z_umax * zooC_loc(k,column) * (work1 / (work1 + autotrophs(auto_ind)%z_grz))
       else
          auto_graze(auto_ind) = c0
-      end if
+      endif
 
 !-----------------------------------------------------------------------
 !  Get N fixation by diazotrophs based on C fixation,
@@ -1871,6 +1929,13 @@ work4 = BGC_output%BGC_tendencies(k,column,po4_ind)
    BGC_diagnostic_fields%diag_Jint_100m_Sitot(column) =  &
       BGC_diagnostic_fields%diag_Jint_100m_Sitot(column) + work1*partial_thickness_100m + &
       merge(P_SiO2%sed_loss, 0.0_BGC_r8, BGC_input%cell_bottom_depth(k,column) <= 100.0e2_BGC_r8)
+
+   do auto_ind = 1, autotroph_cnt
+      work1 = autotrophChl_loc(k,column,auto_ind) * partial_thickness_100m
+      BGC_diagnostic_fields%diag_Chl_TOT_zint_100m(column) = &
+          BGC_diagnostic_fields%diag_Chl_TOT_zint_100m(column) +  &
+          autotrophChl_loc(k,column,auto_ind) * partial_thickness_100m
+   end do
 
    enddo ! k loop
 

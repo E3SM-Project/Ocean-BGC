@@ -56,6 +56,7 @@ MODULE BGC_parms
         exp_calcifier                         ! flag set to true if this autotroph explicitly handles calcification
      INTEGER (KIND=BGC_i4) :: &
         grazee_ind,                         & ! which grazee category does autotroph belong to
+        temp_function,                      & ! functional form of temperature parameterization 
         Chl_ind, C_ind, Fe_ind,             & ! tracer indices for Chl, C, Fe content
         Si_ind, CaCO3_ind                     ! tracer indices for Si, CaCO3 content
      REAL(KIND=BGC_r8) :: &
@@ -66,7 +67,8 @@ MODULE BGC_parms
         PCref,                              & ! max C-spec. grth rate at tref (1/sec)
         thetaN_max,                         & ! max thetaN (Chl/N) (mg Chl/mmol N)
         loss_thres, loss_thres2,            & ! conc. where losses go to zero
-        temp_thres,temp_thres2,             & ! Temp. where concentration threshold and photosynth. rate drops
+        temp_thres,temp_thresS,temp_thresN, & ! Temp. where concentration threshold and photosynth. rate drops
+        temp_optN, temp_optS,               & ! Temp. function optimal value
         mort, mort2,                        & ! linear and quadratic mortality rates (1/sec), (1/sec/((mmol C/m3))
         agg_rate_max, agg_rate_min,         & ! max and min agg. rate (1/d)
         z_umax_0,                           & ! max zoo growth rate at tref (1/sec)
@@ -128,6 +130,8 @@ MODULE BGC_parms
    real (BGC_r8), allocatable, dimension(:,:) :: &
       PotentialTemperature, Salinity,            &
       cell_center_depth, cell_thickness, cell_bottom_depth
+   real (BGC_r8), allocatable, dimension(:) :: &
+      cell_latitude
    integer (BGC_i4), allocatable, dimension(:) ::  &
       number_of_active_levels
   end type BGC_input_type
@@ -300,6 +304,11 @@ MODULE BGC_parms
       diag_Jint_Sitot,     &! diag array for Sitot
       diag_Jint_100m_Sitot  ! diag array for Sitot, 0-100m
 
+! 2D vertical integral of total chlorophyll over top 100m
+! dim (nx,ny)
+    real (BGC_r8), allocatable, dimension(:) :: &
+      diag_Chl_TOT_zint_100m
+
 ! 2D stuff
 ! dim (nx,ny)
     real (BGC_r8), allocatable, dimension(:) :: &
@@ -432,6 +441,13 @@ MODULE BGC_parms
       CaCO3_sp_thres    = 4.0_BGC_r8      ! bloom condition thres (mmolC/m3)
 
   !---------------------------------------------------------------------
+  !     temperature functions
+  !---------------------------------------------------------------------
+
+  INTEGER (KIND=BGC_i4), PARAMETER ::   &
+         tfnc_q10				  = 1,		 & ! classic Q10, no decline
+         tfnc_quasi_mmrt 		  = 2  		   ! consider Topt, mimic macromolecular rate theory
+  !---------------------------------------------------------------------
   !     fraction of incoming shortwave assumed to be PAR
   !---------------------------------------------------------------------
 
@@ -545,8 +561,12 @@ CONTAINS
     autotrophs(auto_ind)%thetaN_max    = 2.5_BGC_r8
     autotrophs(auto_ind)%loss_thres    = 0.04_BGC_r8
     autotrophs(auto_ind)%loss_thres2   = 0.0_BGC_r8
-    autotrophs(auto_ind)%temp_thres    = -10.0_BGC_r8
-    autotrophs(auto_ind)%temp_thres2   = 0.0_BGC_r8
+    autotrophs(auto_ind)%temp_thres    = -20.0_BGC_r8
+    autotrophs(auto_ind)%temp_thresN   = -20.0_BGC_r8
+    autotrophs(auto_ind)%temp_thresS   = -20.0_BGC_r8
+    autotrophs(auto_ind)%temp_function = tfnc_q10
+    autotrophs(auto_ind)%temp_optN     = 50.0_BGC_r8
+    autotrophs(auto_ind)%temp_optS     = 50.0_BGC_r8
     autotrophs(auto_ind)%mort          = 0.12_BGC_r8 * dps
     autotrophs(auto_ind)%mort2         = 0.001_BGC_r8 * dps
     autotrophs(auto_ind)%agg_rate_max  = 0.9_BGC_r8
@@ -580,13 +600,17 @@ CONTAINS
     autotrophs(auto_ind)%thetaN_max    = 4.0_BGC_r8
     autotrophs(auto_ind)%loss_thres    = 0.04_BGC_r8
     autotrophs(auto_ind)%loss_thres2   = 0.0_BGC_r8
-    autotrophs(auto_ind)%temp_thres    = -10.0_BGC_r8
-    autotrophs(auto_ind)%temp_thres2   = 0.0_BGC_r8
+    autotrophs(auto_ind)%temp_thres    = -20.0_BGC_r8
+    autotrophs(auto_ind)%temp_thresN   = 35.0_BGC_r8
+    autotrophs(auto_ind)%temp_thresS   = 10.0_BGC_r8
+    autotrophs(auto_ind)%temp_function = tfnc_q10
+    autotrophs(auto_ind)%temp_optN     = 16.3_BGC_r8
+    autotrophs(auto_ind)%temp_optS     = 5.0_BGC_r8
     autotrophs(auto_ind)%mort          = 0.12_BGC_r8 * dps
     autotrophs(auto_ind)%mort2         = 0.001_BGC_r8 * dps
     autotrophs(auto_ind)%agg_rate_max  = 0.9_BGC_r8
     autotrophs(auto_ind)%agg_rate_min  = 0.02_BGC_r8
-    autotrophs(auto_ind)%z_umax_0      = 3.08_BGC_r8 * dps ! x1 default
+    autotrophs(auto_ind)%z_umax_0      = 3.23_BGC_r8 * dps ! x1 default
     autotrophs(auto_ind)%z_grz         = 1.0_BGC_r8              
     autotrophs(auto_ind)%graze_zoo     = 0.3_BGC_r8
     autotrophs(auto_ind)%graze_poc     = 0.42_BGC_r8
@@ -616,7 +640,11 @@ CONTAINS
     autotrophs(auto_ind)%loss_thres    = 0.022_BGC_r8
     autotrophs(auto_ind)%loss_thres2   = 0.001_BGC_r8
     autotrophs(auto_ind)%temp_thres    = 14.0_BGC_r8
-    autotrophs(auto_ind)%temp_thres2   = 0.0_BGC_r8
+    autotrophs(auto_ind)%temp_thresN   = -20.0_BGC_r8
+    autotrophs(auto_ind)%temp_thresS   = -20.0_BGC_r8
+    autotrophs(auto_ind)%temp_function = tfnc_q10
+    autotrophs(auto_ind)%temp_optN     = 50.0_BGC_r8
+    autotrophs(auto_ind)%temp_optS     = 50.0_BGC_r8
     autotrophs(auto_ind)%mort          = 0.15_BGC_r8 * dps
     autotrophs(auto_ind)%mort2         = 0.0_BGC_r8
     autotrophs(auto_ind)%agg_rate_max  = 0.0_BGC_r8
@@ -635,7 +663,7 @@ CONTAINS
     autotrophs(auto_ind)%Nfixer        = .false.
     autotrophs(auto_ind)%imp_calcifier = .false.
     autotrophs(auto_ind)%exp_calcifier = .false.
-    autotrophs(auto_ind)%grazee_ind    = auto_ind
+    autotrophs(auto_ind)%grazee_ind    = BGC_indices%diat_ind
     autotrophs(auto_ind)%kFe           = 0.075e-3_BGC_r8
     autotrophs(auto_ind)%kPO4          = 0.05_BGC_r8
     autotrophs(auto_ind)%kDOP          = 0.9_BGC_r8
@@ -650,13 +678,17 @@ CONTAINS
     autotrophs(auto_ind)%thetaN_max    = 2.5_BGC_r8
     autotrophs(auto_ind)%loss_thres    = 0.04_BGC_r8
     autotrophs(auto_ind)%loss_thres2   = 0.0_BGC_r8
-    autotrophs(auto_ind)%temp_thres    = -10.0_BGC_r8
-    autotrophs(auto_ind)%temp_thres2    = 30.0_BGC_r8
+    autotrophs(auto_ind)%temp_thres    = -20.0_BGC_r8
+    autotrophs(auto_ind)%temp_thresN   = 35.0_BGC_r8
+    autotrophs(auto_ind)%temp_thresS   = 10.0_BGC_r8
+    autotrophs(auto_ind)%temp_function = tfnc_quasi_mmrt 
+    autotrophs(auto_ind)%temp_optN     = 16.3_BGC_r8
+    autotrophs(auto_ind)%temp_optS     = 5.0_BGC_r8
     autotrophs(auto_ind)%mort          = 0.12_BGC_r8 * dps
     autotrophs(auto_ind)%mort2         = 0.001_BGC_r8 * dps
     autotrophs(auto_ind)%agg_rate_max  = 0.9_BGC_r8
     autotrophs(auto_ind)%agg_rate_min  = 0.02_BGC_r8
-    autotrophs(auto_ind)%z_umax_0      = 3.08_BGC_r8 * dps ! x1 default
+    autotrophs(auto_ind)%z_umax_0      = 3.23_BGC_r8 * dps ! x1 default
     autotrophs(auto_ind)%z_grz         = 1.0_BGC_r8
     autotrophs(auto_ind)%graze_zoo     = 0.3_BGC_r8
     autotrophs(auto_ind)%graze_poc     = 0.42_BGC_r8
