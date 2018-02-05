@@ -2900,7 +2900,7 @@ work4 = BGC_output%BGC_tendencies(k,column,po4_ind)
          call co2calc_1point(depth, locmip_k1_k2_bug_fix, .true., &
                              BGC_forcing%SST(column), BGC_forcing%SSS(column), &
                              DIC_ALT_CO2_loc(column), ALK_loc(column), PO4_loc(column), SiO3_loc(column), &
-                             phlo, phhi, ph_new, BGC_forcing%atmCO2(column), &
+                             phlo, phhi, ph_new, BGC_forcing%atmCO2_ALT_CO2(column), &
                              BGC_forcing%surfacePressure(column), co2star, &
                              dco2star, pco2surf, dpco2)
 
