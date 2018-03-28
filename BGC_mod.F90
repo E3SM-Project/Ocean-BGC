@@ -339,7 +339,7 @@ contains
 
  subroutine BGC_SourceSink(autotrophs, BGC_indices, BGC_input, BGC_forcing,   &
                            BGC_output, BGC_diagnostic_fields, numLevelsMax,   &
-                           numColumnsMax, numColumns)
+                           numColumnsMax, numColumns, alt_co2_use_eco)
 
 ! !DESCRIPTION:
 !  Compute time derivatives for ecosystem state variables
@@ -357,6 +357,7 @@ contains
   type(BGC_forcing_type),     intent(in ) :: BGC_forcing
 
   integer (BGC_i4) :: numLevelsMax, numColumnsMax, numColumns
+  logical (BGC_log) :: alt_co2_use_eco
 
 ! !OUTPUT PARAMETERS:
 
@@ -1735,7 +1736,11 @@ work4 = BGC_output%BGC_tendencies(k,column,po4_ind)
             - CaCO3_PROD(auto_ind)
    end do
 
-   BGC_output%BGC_tendencies(k,column,dic_alt_co2_ind) = BGC_output%BGC_tendencies(k,column,dic_ind)
+   if (alt_co2_use_eco) then  ! set alt dic tendency to zero if we want it to be abiotic
+     BGC_output%BGC_tendencies(k,column,dic_alt_co2_ind) = BGC_output%BGC_tendencies(k,column,dic_ind)
+   else
+     BGC_output%BGC_tendencies(k,column,dic_alt_co2_ind) = 0.0
+   endif
 
 !-----------------------------------------------------------------------
 !  alkalinity
