@@ -571,7 +571,7 @@ CONTAINS
     autotrophs(auto_ind)%mort2         = 0.001_BGC_r8 * dps
     autotrophs(auto_ind)%agg_rate_max  = 0.9_BGC_r8
     autotrophs(auto_ind)%agg_rate_min  = 0.01_BGC_r8
-    autotrophs(auto_ind)%z_umax_0      = 3.25_BGC_r8 * dps ! x1 default
+    autotrophs(auto_ind)%z_umax_0      = 3.3_BGC_r8 * dps ! x1 default
     autotrophs(auto_ind)%z_grz         = 1.05_BGC_r8              
     autotrophs(auto_ind)%graze_zoo     = 0.3_BGC_r8
     autotrophs(auto_ind)%graze_poc     = 0.0_BGC_r8
