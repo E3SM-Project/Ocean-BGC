@@ -992,7 +992,9 @@ contains
    BGC_diagnostic_fields%diag_H2CO3_ALT_CO2(k,column) = H2CO3_ALT_CO2
    BGC_diagnostic_fields%diag_pH_3D_ALT_CO2(k,column) = work4
 
-   call comp_co3_sat_vals(k, BGC_input%cell_center_depth(k,column),   &
+   work5 = BGC_input%cell_center_depth(k,column)*0.01_BGC_r8
+!  call comp_co3_sat_vals(k, BGC_input%cell_center_depth(k,column),   &
+   call comp_co3_sat_vals(k, work5,   &
       BGC_input%PotentialTemperature(k,column), BGC_input%Salinity(k,column), work1, work2) 
                             
    BGC_diagnostic_fields%diag_co3_sat_calc(k,column) = work1
