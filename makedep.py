@@ -6,7 +6,7 @@
 # Read in every file in $SRC_DIR and $SRC_DIR2 (arguments 3 and 4)
 # Only depend on modules located in $SRC_DIR or $SRC_DIR2
 
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 
 import os
 import sys
