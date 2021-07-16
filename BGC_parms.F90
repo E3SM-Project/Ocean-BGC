@@ -21,7 +21,7 @@ MODULE BGC_parms
       BGC_i4             = selected_int_kind(6)   ,&
       BGC_i8             = selected_int_kind(13)  ,&
       BGC_r4             = selected_real_kind(6)  ,&
-      BGC_r8             = selected_real_kind(13)
+      BGC_r8             = selected_real_kind(6)
 
   !-----------------------------------------------------------------------------
   !   floating point constants used across ecosystem module
